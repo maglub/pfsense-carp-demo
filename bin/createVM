@@ -14,12 +14,20 @@ hosts="fw01 fw02"
 
 #--- configure Virtualbox networks
 #---  - vboxnet10 => WAN, set up with DHCP to emulate an ISP, and to speed up the config of the pfSense installation
-VBoxManage hostonlyif ipconfig vboxnet10 --ip 192.168.149.1 --netmask 255.255.255.0
+VBoxManage hostonlyif remove vboxnet10
+VBoxManage hostonlyif create vboxnet10
+VBoxManage hostonlyif ipconfig vboxnet10 --ip 192.168.149.1 --netmask 255.255.255.0 create
 VBoxManage dhcpserver remove --ifname vboxnet10 
 VBoxManage dhcpserver add --ifname vboxnet10 --ip 192.168.149.100 --netmask 255.255.255.0 --lowerip 192.168.149.101 --upperip 192.168.149.150 --enable
 
 #---  - vboxnet11 => LAN
+VBoxManage hostonlyif remove vboxnet11
+VBoxManage hostonlyif create vboxnet11
 VBoxManage hostonlyif ipconfig vboxnet11 --ip 192.168.150.1 --netmask 255.255.255.0
+
+VBoxManage hostonlyif remove vboxnet12
+VBoxManage hostonlyif create vboxnet12
+
 
 for vmName in ${hosts}
 do
