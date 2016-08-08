@@ -88,6 +88,12 @@ Now you can ping 192.168.150.4 from your laptop. Do this, and shut down fw01, an
 * Delete the firewall VMs
 
 ```
+bin/deleteVM
+```
+
+or
+
+```
 for vmName in fw01 fw02
 do
 VBoxManage controlvm "$vmName"  poweroff 
