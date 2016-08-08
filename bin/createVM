@@ -1,33 +1,51 @@
 #!/bin/bash
 
+this_dir=$(cd $(dirname $0);pwd)
+this_script=$(basename $0)
+
+. $this_dir/functions
 #--- Variables
-isoImage=pfSense-CE-2.3.2-RELEASE-amd64.iso
-isoImagePath=`pwd`/${isoImage}
+isoImage="pfSense-CE-2.3.2-RELEASE-amd64.iso"
+isoImagePath=$this_dir/../${isoImage}
 isoURL=https://frafiles.pfsense.org/mirror/downloads/${isoImage}.gz
+
+isoGz="${isoImage}.gz"
+isoURL="https://frafiles.pfsense.org/mirror/downloads/${isoImage}.gz"
+if [ ! -e "$isoImage" ]; then
+       if [ ! -e "$isoGz" ]; then
+               wget "$isoURL"
+       else
+               gunzip "$isoGz"
+       fi
+fi
+
 
 sshPort=9998
 hosts="fw01 fw02"
+
+WAN_IP=192.168.149.1
+WAN_SUBNET=255.255.255.0
+
+WAN_IP=192.168.149.1
+WAN_SUBNET=255.255.255.0
+
+WAN_IP=192.168.149.1
+WAN_SUBNET=255.255.255.0
+
 
 #========================================================
 # MAIN
 #========================================================
 
 #--- configure Virtualbox networks
-#---  - vboxnet10 => WAN, set up with DHCP to emulate an ISP, and to speed up the config of the pfSense installation
-VBoxManage hostonlyif remove vboxnet10
-VBoxManage hostonlyif create vboxnet10
-VBoxManage hostonlyif ipconfig vboxnet10 --ip 192.168.149.1 --netmask 255.255.255.0 create
-VBoxManage dhcpserver remove --ifname vboxnet10 
-VBoxManage dhcpserver add --ifname vboxnet10 --ip 192.168.149.100 --netmask 255.255.255.0 --lowerip 192.168.149.101 --upperip 192.168.149.150 --enable
 
-#---  - vboxnet11 => LAN
-VBoxManage hostonlyif remove vboxnet11
-VBoxManage hostonlyif create vboxnet11
-VBoxManage hostonlyif ipconfig vboxnet11 --ip 192.168.150.1 --netmask 255.255.255.0
+WAN_Network=$(createHostOnlyNetwork)
+LAN_Network=$(createHostOnlyNetwork)
+SYNC_Network=$(createHostOnlyNetwork)
 
-VBoxManage hostonlyif remove vboxnet12
-VBoxManage hostonlyif create vboxnet12
-
+setupWAN ${WAN_Network}
+setupLAN ${LAN_Network}
+setupSYNC ${SYNC_Network}
 
 for vmName in ${hosts}
 do
@@ -37,13 +55,12 @@ do
     VBoxManage modifyvm "$vmName" --memory 256 --acpi on --boot1 dvd --vram 33 --cpus 1
 
     #--- Network cards
-    VBoxManage modifyvm "$vmName" --nic1 hostonly --nictype1 82540EM --hostonlyadapter1 vboxnet10
-    VBoxManage modifyvm "$vmName" --nic2 hostonly --nictype2 82540EM --hostonlyadapter2 vboxnet11
-    VBoxManage modifyvm "$vmName" --nic3 hostonly --nictype3 82540EM --hostonlyadapter3 vboxnet12
+    VBoxManage modifyvm "$vmName" --nic1 hostonly --nictype1 82540EM --hostonlyadapter1 ${WAN_Network}
+    VBoxManage modifyvm "$vmName" --nic2 hostonly --nictype2 82540EM --hostonlyadapter2 ${LAN_Network}
+    VBoxManage modifyvm "$vmName" --nic3 hostonly --nictype3 82540EM --hostonlyadapter3 ${SYNC_Network}
 
     #--- Promiscous mode for WAN and LAN
     VBoxManage modifyvm "$vmName"  --nicpromisc1 allow-all
-    sleep 1
     VBoxManage modifyvm "$vmName"  --nicpromisc2 allow-all
 
     VBoxManage modifyvm "$vmName" --ostype FreeBSD_64
