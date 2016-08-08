@@ -1,0 +1,57 @@
+#!/bin/bash
+
+#--- Variables
+isoImage=pfSense-CE-2.3.2-RELEASE-amd64.iso
+isoImagePath=`pwd`/${isoImage}
+isoURL=https://frafiles.pfsense.org/mirror/downloads/${isoImage}.gz
+
+sshPort=9998
+hosts="fw01 fw02"
+
+#========================================================
+# MAIN
+#========================================================
+
+#--- configure Virtualbox networks
+#---  - vboxnet10 => WAN, set up with DHCP to emulate an ISP, and to speed up the config of the pfSense installation
+VBoxManage hostonlyif ipconfig vboxnet10 --ip 192.168.149.1 --netmask 255.255.255.0
+VBoxManage dhcpserver remove --ifname vboxnet10 
+VBoxManage dhcpserver add --ifname vboxnet10 --ip 192.168.149.100 --netmask 255.255.255.0 --lowerip 192.168.149.101 --upperip 192.168.149.150 --enable
+
+#---  - vboxnet11 => LAN
+VBoxManage hostonlyif ipconfig vboxnet11 --ip 192.168.150.1 --netmask 255.255.255.0
+
+for vmName in ${hosts}
+do
+
+    VBoxManage createvm --name "$vmName" --register
+    vmDir=$(VBoxManage showvminfo "$vmName" | grep "^Config file:"  | awk -F":" '{print $2}' | xargs -L1 -IX dirname "X")
+    VBoxManage modifyvm "$vmName" --memory 256 --acpi on --boot1 dvd --vram 33 --cpus 1
+
+    #--- Network cards
+    VBoxManage modifyvm "$vmName" --nic1 hostonly --nictype1 82540EM --hostonlyadapter1 vboxnet10
+    VBoxManage modifyvm "$vmName" --nic2 hostonly --nictype2 82540EM --hostonlyadapter2 vboxnet11
+    VBoxManage modifyvm "$vmName" --nic3 hostonly --nictype3 82540EM --hostonlyadapter3 vboxnet12
+
+    #--- Promiscous mode for WAN and LAN
+    VBoxManage modifyvm "$vmName"  --nicpromisc1 allow-all
+    sleep 1
+    VBoxManage modifyvm "$vmName"  --nicpromisc2 allow-all
+
+    VBoxManage modifyvm "$vmName" --ostype FreeBSD_64
+    VBoxManage modifyvm "$vmName"  --ioapic on
+    VBoxManage modifyvm "$vmName"  --boot1 disk
+    VBoxManage modifyvm "$vmName"  --boot2 dvd
+
+    VBoxManage createhd --filename "$vmDir/${vmName}.vdi" --size 2000
+    VBoxManage storagectl "$vmName" --name "SATA" --add sata
+    VBoxManage storageattach "$vmName" --storagectl "SATA" --port 0 --device 0 --type hdd --medium "${vmDir}/${vmName}.vdi"
+    VBoxManage storagectl "$vmName" --name "IDE" --add ide
+    VBoxManage storageattach "$vmName" --storagectl "IDE" --port 1 --device 0 --type dvddrive --medium "$isoImage"
+
+    VBoxManage showvminfo "$vmName"
+    VBoxManage startvm "$vmName"
+
+    (( sshPort += 1 ))
+done
+

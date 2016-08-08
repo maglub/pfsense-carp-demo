@@ -1,0 +1,8 @@
+#!/bin/bash
+
+for vmName in fw01 fw02
+do
+VBoxManage controlvm "$vmName"  poweroff
+VBoxManage unregistervm "$vmName" --delete
+done
+
