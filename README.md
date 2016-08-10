@@ -35,19 +35,20 @@ bin/createVM
   * em0
   * em1
   * em2
+  * <enter>
 
 * Configure IP address on LAN interface on both VMs (menu item 2, interface 2)
-  * fw01 => 192.168.150.2 (24 bit netmask)
-  * fw02 => 192.168.150.3 (24 bit netmask)
+  * fw01 => 192.168.150.2 (24 bit netmask), No WAN, No IPv6 address, No DHCP, Do not revert to HTTP
+  * fw02 => 192.168.150.3 (24 bit netmask), No WAN, No IPv6 address, No DHCP, Do not revert to HTTP
   * No DHCP server
   * Do not revert to http as the web configurator protocol
 
 * Enable ssh (menu item 14)
 
 * Use your web-browser to log in (admin/pfsense) to the web gui
-  * https://192.168.150.2
-  * https://192.168.150.3
-  * Click the logo to avoid the configuration
+  * https://192.168.150.2, Click the logo to avoid the configuration wizard
+  * https://192.168.150.3, Click the logo to avoid the configuration wizard
+
 
 * Rename Interface OPT1 to SYNC (Interfaces->OPT1) and set IP on both nodes
   * enable the interfaces
@@ -56,21 +57,30 @@ bin/createVM
     * fw02 => 192.168.151.3/24
 
 * Add rule to allow TCP traffic from the sync network to "any" (Firewall->Rules->SYNC, Add above)
+  * Protocol: ICMP
+  * Source: SYNC net
+  * Save
+  * Apply
+
+* Add rule to allow ping from the sync network to "any" (Firewall->Rules->SYNC, Add above)
   * Source: SYNC net
   * Save
   * Apply
 
 * Configure State Synchronization Settings (pfsync) (System->High Avail Sync) on BOTH nodes
+  * Enable check box "Synchronize states"
   * Interface: SYNC
   * IP address of the other node
   * Save
 
-* Configure Configuration Synchronization Settings (XMLRPC Sync) (only on master node)
+* Configure Configuration Synchronization Settings (XMLRPC Sync) (only on master node: fw01)
   * IP Address: 192.168.151.3
+  * Remote system username: admin
+  * Remote system password: pfsense
   * Toggle all
   * Save
 
-* Add virtual IP on the LAN interface (192.168.150.4) on the master node (Firewall->Virtual IPs)
+* Add virtual IP on the LAN interface (192.168.150.4) on the master node fw01 (Firewall->Virtual IPs)
   * Add
   * Click CARP radio button
   * Interface LAN
@@ -104,3 +114,4 @@ done
 # References
 
 * https://doc.pfsense.org/index.php/Configuring_pfSense_Hardware_Redundancy_(CARP)
+* https://www.virtualbox.org/manual/ch08.html
