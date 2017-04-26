@@ -18,7 +18,7 @@ Note, networks for em0 and em1 are configured to allow promiscous mode.
 * Download the ISO from pfsense.org
 
 ```
-wget https://frafiles.pfsense.org/mirror/downloads/pfSense-CE-2.3.2-RELEASE-amd64.iso.gz
+wget https://frafiles.pfsense.org/mirror/downloads/pfSense-CE-2.3.3-RELEASE-amd64.iso.gz
 gunzip pfSense-CE-2.3.2-RELEASE-amd64.iso.gz
 ```
 
