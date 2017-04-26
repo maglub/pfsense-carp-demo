@@ -3,9 +3,9 @@
 this_dir=$(cd $(dirname $0);pwd)
 this_script=$(basename $0)
 
-. $this_dir/functions
+#. $this_dir/functions
 #--- Variables
-isoImage="pfSense-CE-2.3.2-RELEASE-amd64.iso"
+isoImage="pfSense-CE-2.3.3-RELEASE-amd64.iso"
 isoImagePath=$this_dir/../${isoImage}
 isoURL=https://frafiles.pfsense.org/mirror/downloads/${isoImage}.gz
 
@@ -14,6 +14,7 @@ isoURL="https://frafiles.pfsense.org/mirror/downloads/${isoImage}.gz"
 if [ ! -e "$isoImage" ]; then
        if [ ! -e "$isoGz" ]; then
                wget "$isoURL"
+               gunzip "$isoGz"
        else
                gunzip "$isoGz"
        fi
@@ -26,12 +27,29 @@ hosts="fw01 fw02"
 WAN_IP=192.168.149.1
 WAN_SUBNET=255.255.255.0
 
-WAN_IP=192.168.149.1
-WAN_SUBNET=255.255.255.0
+#========================================================
+# FUNCTIONS
+#========================================================
 
-WAN_IP=192.168.149.1
-WAN_SUBNET=255.255.255.0
+function createHostOnlyNetwork(){
+  local curIF=$(VBoxManage hostonlyif create 2>/dev/null | awk '{print $2}' | sed -e "s/'//g")
+  echo "Created network: $curIF - Remove with:" 1>&2
+  echo "VBoxManage hostonlyif remove $curIF" 1>&2
+  echo "$curIF"
+}
 
+function setupWAN(){
+  return 0
+}
+
+function setupLAN(){
+  vBoxManage hostonlyif ipconfig $LAN_Network --ip 192.168.150.1
+  return 0
+}
+
+function setupSYNC(){
+  return 0
+}
 
 #========================================================
 # MAIN
@@ -49,9 +67,9 @@ setupSYNC ${SYNC_Network}
 
 for vmName in ${hosts}
 do
-
+cat<<EOT>${vmName}.sh
     VBoxManage createvm --name "$vmName" --register
-    vmDir=$(VBoxManage showvminfo "$vmName" | grep "^Config file:"  | awk -F":" '{print $2}' | xargs -L1 -IX dirname "X")
+    vmDir=\$(VBoxManage showvminfo "$vmName" | grep "^Config file:"  | awk -F":" '{print \$2}' | xargs -L1 -IX dirname "X")
     VBoxManage modifyvm "$vmName" --memory 256 --acpi on --boot1 dvd --vram 33 --cpus 1
 
     #--- Network cards
@@ -68,15 +86,28 @@ do
     VBoxManage modifyvm "$vmName"  --boot1 disk
     VBoxManage modifyvm "$vmName"  --boot2 dvd
 
-    VBoxManage createhd --filename "$vmDir/${vmName}.vdi" --size 2000
+    VBoxManage createhd --filename "\$vmDir/${vmName}.vdi" --size 2000
     VBoxManage storagectl "$vmName" --name "SATA" --add sata
-    VBoxManage storageattach "$vmName" --storagectl "SATA" --port 0 --device 0 --type hdd --medium "${vmDir}/${vmName}.vdi"
+    VBoxManage storageattach "$vmName" --storagectl "SATA" --port 0 --device 0 --type hdd --medium "\${vmDir}/${vmName}.vdi"
     VBoxManage storagectl "$vmName" --name "IDE" --add ide
     VBoxManage storageattach "$vmName" --storagectl "IDE" --port 1 --device 0 --type dvddrive --medium "$isoImage"
 
     VBoxManage showvminfo "$vmName"
     VBoxManage startvm "$vmName"
+EOT
 
     (( sshPort += 1 ))
+  echo "bash ${vmName}.sh"
 done
 
+cat<<EOT | tee cleanup.sh
+
+#Cleanup:
+
+VBoxManage hostonlyif remove ${WAN_Network}
+VBoxManage hostonlyif remove ${LAN_Network}
+VBoxManage hostonlyif remove ${SYNC_Network}
+
+EOT
+
+echo  "Or run: sh cleanup.sh"
