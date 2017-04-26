@@ -115,3 +115,4 @@ done
 
 * https://doc.pfsense.org/index.php/Configuring_pfSense_Hardware_Redundancy_(CARP)
 * https://www.virtualbox.org/manual/ch08.html
+* https://www.thomas-krenn.com/de/wiki/Netzwerkkonfiguration_in_VirtualBox#Beispielkonfiguration_eines_statischen_NAT_Netzwerks
