@@ -32,7 +32,7 @@ bin/createVM
 
 * Configure interfaces (menu item 1) (type 1 n em0<enter> em1<enter> em2<enter> <enter> y)
   * No VLAN
-  * em0
+  * em5
   * em1
   * em2
   * <enter>
