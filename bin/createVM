@@ -27,6 +27,9 @@ hosts="fw01 fw02"
 WAN_IP=192.168.149.1
 WAN_SUBNET=255.255.255.0
 
+LAN_IP=192.168.150.1
+WAN_SUBNET=255.255.255.0
+
 #========================================================
 # FUNCTIONS
 #========================================================
@@ -43,7 +46,7 @@ function setupWAN(){
 }
 
 function setupLAN(){
-  vBoxManage hostonlyif ipconfig $LAN_Network --ip 192.168.150.1
+  vBoxManage hostonlyif ipconfig $LAN_Network --ip $LAN_IP
   return 0
 }
 
@@ -57,6 +60,7 @@ function setupSYNC(){
 
 #--- configure Virtualbox networks
 
+NAT_Network=NatNetwork
 WAN_Network=$(createHostOnlyNetwork)
 LAN_Network=$(createHostOnlyNetwork)
 SYNC_Network=$(createHostOnlyNetwork)
@@ -68,14 +72,31 @@ setupSYNC ${SYNC_Network}
 for vmName in ${hosts}
 do
 cat<<EOT>${vmName}.sh
+    #adapterType=82540OEM
+    #adapterType=82543GC
+    #adapterType=virtio
+    adapterType=82545EM
+
+    WAN_Network=$WAN_Network
+    NAT_Network=$NAT_Network
+    LAN_Network=$LAN_Network
+    SYNC_Network=$SYNC_Network
+
     VBoxManage createvm --name "$vmName" --register
     vmDir=\$(VBoxManage showvminfo "$vmName" | grep "^Config file:"  | awk -F":" '{print \$2}' | xargs -L1 -IX dirname "X")
     VBoxManage modifyvm "$vmName" --memory 256 --acpi on --boot1 dvd --vram 33 --cpus 1
 
+    # https://www.thomas-krenn.com/de/wiki/Netzwerkkonfiguration_in_VirtualBox#Beispielkonfiguration_eines_statischen_NAT_Netzwerks
     #--- Network cards
-    VBoxManage modifyvm "$vmName" --nic1 hostonly --nictype1 82540EM --hostonlyadapter1 ${WAN_Network}
-    VBoxManage modifyvm "$vmName" --nic2 hostonly --nictype2 82540EM --hostonlyadapter2 ${LAN_Network}
-    VBoxManage modifyvm "$vmName" --nic3 hostonly --nictype3 82540EM --hostonlyadapter3 ${SYNC_Network}
+    #VBoxManage modifyvm "$vmName" --nic1 hostonly --nictype1 \$adapterType --hostonlyadapter1 \${WAN_Network}
+    VBoxManage modifyvm "$vmName" --nic1 natnetwork --nictype1 \$adapterType --hostonlyadapter1 \${NAT_Network}
+    VBoxManage modifyvm "$vmName" --nic2 hostonly --nictype2 \$adapterType --hostonlyadapter2 \${LAN_Network}
+    VBoxManage modifyvm "$vmName" --nic3 hostonly --nictype3 \$adapterType --hostonlyadapter3 \${SYNC_Network}
+    VBoxManage modifyvm "$vmName" --nic4 hostonly --nictype4 \$adapterType --hostonlyadapter4 \${SYNC_Network}
+    VBoxManage modifyvm "$vmName" --nic5 hostonly --nictype5 \$adapterType --hostonlyadapter5 \${SYNC_Network}
+    VBoxManage modifyvm "$vmName" --nic6 hostonly --nictype6 \$adapterType --hostonlyadapter6 \${SYNC_Network}
+    VBoxManage modifyvm "$vmName" --nic7 hostonly --nictype7 \$adapterType --hostonlyadapter7 \${SYNC_Network}
+    VBoxManage modifyvm "$vmName" --nic8 hostonly --nictype8 \$adapterType --hostonlyadapter8 \${SYNC_Network}
 
     #--- Promiscous mode for WAN and LAN
     VBoxManage modifyvm "$vmName"  --nicpromisc1 allow-all
